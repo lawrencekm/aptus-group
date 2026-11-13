@@ -48,6 +48,32 @@ body {
   background-size: 48px 48px;
 }
 
+/* Hero photo: very slow drift so the scene feels alive without distracting */
+@keyframes hero-drift {
+  from { transform: scale(1.06) translate3d(0, 0, 0); }
+  to { transform: scale(1.12) translate3d(-1.5%, -1%, 0); }
+}
+.hero-drift { animation: hero-drift 28s ease-in-out infinite alternate; }
+
+/* A faint headlight glow travelling along the road line */
+@keyframes headlight {
+  0% { background-position: -40% 0; opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { background-position: 140% 0; opacity: 0; }
+}
+.headlight-sweep {
+  background: linear-gradient(90deg, transparent, rgba(226, 176, 74, 0.55), rgba(240, 68, 46, 0.35), transparent) no-repeat;
+  background-size: 35% 100%;
+  box-shadow: 0 0 18px rgba(226, 176, 74, 0.25);
+  animation: headlight 9s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-drift, .headlight-sweep { animation: none; }
+  .headlight-sweep { opacity: 0; }
+}
+
 /* Markdown body on tracking pages */
 .prose-ag {
   line-height: 1.7;

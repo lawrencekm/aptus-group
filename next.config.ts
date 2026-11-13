@@ -10,6 +10,11 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  images: {
+    // Photography is served from Unsplash (free licence) and optimised/cached by Next.js.
+    remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com", pathname: "/photo-**" }],
+    formats: ["image/avif", "image/webp"],
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

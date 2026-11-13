@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Icon } from "./Icon";
 import { faqs, services, site } from "@/lib/site";
@@ -8,9 +9,26 @@ export function Eyebrow({ children, light = false }: { children: React.ReactNode
   );
 }
 
-export function PageHero({ eyebrow, title, intro }: { eyebrow: string; title: string; intro: string }) {
+export function PageHero({
+  eyebrow,
+  title,
+  intro,
+  image,
+}: {
+  eyebrow: string;
+  title: string;
+  intro: string;
+  image?: { src: string; alt: string };
+}) {
   return (
-    <section className="relative overflow-hidden bg-ink-900 text-white">
+    <section className="relative isolate overflow-hidden bg-ink-900 text-white">
+      {image && (
+        <div className="absolute inset-y-0 right-0 -z-10 w-full md:w-3/5" aria-hidden="true">
+          <Image src={image.src} alt="" fill priority sizes="(min-width: 768px) 60vw, 100vw" className="object-cover opacity-40 md:opacity-70" />
+          <div className="absolute inset-0 bg-gradient-to-r from-ink-900 via-ink-900/70 to-ink-900/10" />
+          <div className="absolute inset-0 bg-gradient-to-t from-ink-900/80 via-transparent to-ink-900/40" />
+        </div>
+      )}
       <div className="grid-lines absolute inset-0" aria-hidden="true" />
       <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-brand-500/25 blur-3xl" aria-hidden="true" />
       <div className="container-x relative py-16 sm:py-20">

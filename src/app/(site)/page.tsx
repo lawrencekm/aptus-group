@@ -1,4 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
+import { photos } from "@/lib/images";
 import { Icon } from "@/components/Icon";
 import { TrackForm } from "@/components/TrackForm";
 import { CtaBand, Eyebrow, Faq, ServiceGrid } from "@/components/Blocks";
@@ -11,10 +13,28 @@ export default function HomePage() {
       <JsonLd data={faqLd()} />
 
       {/* Hero */}
-      <section className="relative overflow-hidden bg-ink-900 text-white">
-        <div className="grid-lines absolute inset-0" aria-hidden="true" />
+      <section className="relative isolate overflow-hidden bg-ink-900 text-white">
+        {/* Photo melts into the navy: dimmed, slow drift, faded on every edge */}
+        <div className="absolute inset-0 -z-10" aria-hidden="true">
+          <Image
+            src={photos.heroTruck.src}
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="hero-drift -scale-x-100 object-cover object-[35%_center] opacity-80 lg:object-[40%_70%] lg:opacity-95"
+          />
+          {/* Phones: text sits on a top-down fade, truck shows through below. Desktop: side fade behind the copy. */}
+          <div className="absolute inset-0 bg-gradient-to-b from-ink-900 via-ink-900/85 to-ink-900/35 lg:hidden" />
+          <div className="absolute inset-0 hidden bg-gradient-to-r from-ink-900 via-ink-900/55 to-transparent lg:block" />
+          <div className="absolute inset-0 bg-gradient-to-t from-ink-900/90 via-transparent to-ink-900/70" />
+          <div className="absolute inset-0 bg-brand-500/[0.04] mix-blend-color" />
+        </div>
+        <div className="grid-lines absolute inset-0 opacity-60" aria-hidden="true" />
         <div className="absolute -left-40 top-20 h-[28rem] w-[28rem] rounded-full bg-brand-500/20 blur-3xl" aria-hidden="true" />
         <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-gold-400/10 blur-3xl" aria-hidden="true" />
+        {/* Headlight sweep along the road line */}
+        <div className="headlight-sweep absolute bottom-[18%] left-0 h-px w-full" aria-hidden="true" />
         <div className="container-x relative grid items-center gap-12 py-16 sm:py-24 lg:grid-cols-[1.15fr_1fr]">
           <div>
             <Eyebrow light>Transport · Logistics · Safe Custody</Eyebrow>
@@ -48,7 +68,7 @@ export default function HomePage() {
             </dl>
           </div>
 
-          <div className="rounded-3xl bg-white/[0.06] p-6 ring-1 ring-white/10 backdrop-blur sm:p-8">
+          <div className="rounded-3xl bg-ink-900/55 p-6 shadow-2xl shadow-black/40 ring-1 ring-white/15 backdrop-blur-md sm:p-8">
             <div className="flex items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500">
                 <Icon name="box" className="h-5 w-5" />
@@ -91,17 +111,49 @@ export default function HomePage() {
       </section>
 
       {/* Safe custody highlight */}
-      <section className="py-20">
-        <div className="container-x grid items-center gap-12 lg:grid-cols-2">
-          <div className="relative overflow-hidden rounded-3xl bg-ink-900 p-8 text-white sm:p-10">
-            <div className="grid-lines absolute inset-0" aria-hidden="true" />
-            <div className="relative">
-              <Icon name="shield" className="h-12 w-12 text-gold-400" strokeWidth={1.4} />
-              <p className="mt-6 font-display text-2xl font-bold leading-snug">
-                &ldquo;Your goods are released only to you, or to someone you authorise in writing.&rdquo;
-              </p>
-              <p className="mt-4 text-sm text-ink-400">Our release policy for every safe custody deposit.</p>
+      <section className="overflow-x-clip py-20 sm:py-24">
+        <div className="container-x grid items-center gap-16 lg:grid-cols-2">
+          <div className="relative mr-4 sm:mr-10 lg:mr-6">
+            {/* Vault photo with the release promise set into it */}
+            <div className="relative aspect-[4/5] overflow-hidden rounded-3xl bg-ink-900 shadow-2xl shadow-ink-900/25 sm:aspect-[5/4] lg:aspect-[4/5]">
+              <Image
+                src={photos.vaultBoxes.src}
+                alt={photos.vaultBoxes.alt}
+                fill
+                sizes="(min-width: 1024px) 45vw, 100vw"
+                className="object-cover object-[85%_center] grayscale-[35%] transition-transform duration-[1.5s] ease-out hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-ink-900 via-ink-900/55 to-ink-900/5" />
+              <div className="absolute inset-0 bg-gradient-to-br from-gold-400/10 via-transparent to-transparent mix-blend-overlay" />
+
+              <span className="absolute left-5 top-5 inline-flex items-center gap-2 rounded-full bg-ink-900/60 px-3.5 py-1.5 text-xs font-semibold text-white ring-1 ring-white/15 backdrop-blur">
+                <Icon name="lock" className="h-3.5 w-3.5 text-gold-400" /> Sealed · Insured · ID-controlled
+              </span>
+
+              <div className="absolute inset-x-0 bottom-0 p-7 text-white sm:p-9">
+                <Icon name="shield" className="h-10 w-10 text-gold-400" strokeWidth={1.4} />
+                <p className="mt-4 max-w-md font-display text-xl font-bold leading-snug sm:text-2xl">
+                  &ldquo;Your goods are released only to you, or to someone you authorise in writing.&rdquo;
+                </p>
+                <p className="mt-3 text-sm text-ink-300">Our release policy for every safe custody deposit.</p>
+              </div>
             </div>
+
+            {/* Polaroid-style inset: the people the vault is really for */}
+            <figure className="absolute -right-4 -top-10 w-36 rotate-[4deg] rounded-2xl bg-white p-2 pb-3 shadow-2xl shadow-ink-900/30 ring-1 ring-ink-100 transition-transform duration-500 hover:rotate-0 sm:-right-10 sm:w-52 lg:-right-8">
+              <div className="relative aspect-[4/5] overflow-hidden rounded-xl">
+                <Image
+                  src={photos.happyCouple.src}
+                  alt={photos.happyCouple.alt}
+                  fill
+                  sizes="(min-width: 640px) 208px, 144px"
+                  className="object-cover object-top"
+                />
+              </div>
+              <figcaption className="mt-2 px-1 text-center font-display text-[11px] font-semibold leading-tight text-ink-700 sm:text-xs">
+                Title deeds, heirlooms, peace of mind.
+              </figcaption>
+            </figure>
           </div>
           <div>
             <Eyebrow>Safe custody</Eyebrow>

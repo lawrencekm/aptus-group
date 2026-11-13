@@ -4,6 +4,7 @@ import { CtaBand, Eyebrow, PageHero } from "@/components/Blocks";
 import { Icon } from "@/components/Icon";
 import { JsonLd, breadcrumbLd } from "@/lib/jsonld";
 import { site } from "@/lib/site";
+import { photos } from "@/lib/images";
 
 export const metadata: Metadata = {
   title: "Safe Custody & Safe Keeping in Nairobi",
@@ -48,6 +49,7 @@ export default function SafeCustodyPage() {
         eyebrow="Safe custody"
         title="Safe keeping for what matters most"
         intro="Secure, insured storage at the JKIA Cargo Transit Zone, with a private tracking page for every deposit."
+        image={photos.vaultWall}
       />
 
       <section className="py-16">
