@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { PageHero } from "@/components/Blocks";
 import { Icon } from "@/components/Icon";
-import { QuoteForm } from "@/components/QuoteForm";
+import { ContactForms } from "@/components/QuoteForm";
 import { JsonLd, breadcrumbLd } from "@/lib/jsonld";
 import { services, site } from "@/lib/site";
 
@@ -11,12 +11,12 @@ export const metadata: Metadata = {
   alternates: { canonical: "/contact" },
 };
 
-export default async function ContactPage({ searchParams }: { searchParams: Promise<{ service?: string }> }) {
-  const { service } = await searchParams;
+export default async function ContactPage({ searchParams }: { searchParams: Promise<{ service?: string; tab?: string }> }) {
+  const { service, tab } = await searchParams;
   return (
     <>
       <JsonLd data={breadcrumbLd([{ name: "Home", path: "/" }, { name: "Contact", path: "/contact" }])} />
-      <PageHero eyebrow="Contact" title="Get a free quote" intro="Tell us what you need moved, cleared or stored. We reply within one working day." />
+      <PageHero eyebrow="Contact" title="Get a free quote or send us a message" intro="Tell us what you need moved, cleared or stored. We reply within one working day, and you get a PDF receipt for every request." />
       <section className="py-16">
         <div className="container-x grid gap-10 lg:grid-cols-[1fr_1.4fr]">
           <div className="space-y-4">
@@ -42,7 +42,7 @@ export default async function ContactPage({ searchParams }: { searchParams: Prom
             ))}
           </div>
           <div className="rounded-3xl border border-ink-100 bg-white p-6 shadow-sm sm:p-8">
-            <QuoteForm services={services.map((s) => s.title)} initialService={service} />
+            <ContactForms services={services.map((s) => s.title)} initialService={service} initialTab={tab === "message" ? "message" : "quote"} />
           </div>
         </div>
       </section>

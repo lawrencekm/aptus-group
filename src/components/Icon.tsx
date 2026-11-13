@@ -4,9 +4,13 @@ import type { ReactNode } from "react";
 type Name =
   | "shield" | "warehouse" | "plane" | "ship" | "stamp" | "truck" | "phone" | "mail" | "pin" | "clock"
   | "search" | "check" | "arrow" | "lock" | "copy" | "edit" | "trash" | "eye" | "plus" | "upload"
-  | "link" | "refresh" | "logout" | "activity" | "box" | "inbox" | "x" | "menu" | "whatsapp" | "print";
+  | "link" | "refresh" | "logout" | "activity" | "box" | "inbox" | "x" | "menu" | "whatsapp" | "print"
+  | "file" | "send" | "download";
 
 const paths: Record<Name, ReactNode> = {
+  file: <path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8l-5-5zm0 0v5h5M9 13h6M9 17h6" />,
+  send: <path d="M21 3L10 14M21 3l-7 18-4-7-7-4 18-7z" />,
+  download: <path d="M12 4v11m0 0l-4-4m4 4l4-4M5 20h14" />,
   shield: <path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3zm-3 9l2 2 4-4" />,
   warehouse: <path d="M3 21V9l9-5 9 5v12M7 21v-8h10v8M7 17h10" />,
   plane: <path d="M10.5 13.5L3 11l1.5-1.5 8 1L17 6c.8-.8 2.2-.8 3 0s.8 2.2 0 3l-4.5 4.5 1 8L15 23l-2.5-7.5L9 19v3l-1.5 1-1-4-4-1 1-1.5h3z" />,

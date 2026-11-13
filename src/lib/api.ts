@@ -2,6 +2,7 @@ import "server-only";
 import { clientIp, currentAdmin, json, sameOrigin } from "./security";
 import { isStatus, type ShipmentInput } from "./data";
 import { parseFrontmatter } from "./frontmatter";
+import { cleanReceipt } from "./receipt-fields";
 
 type Ctx = { ip: string; sid: string };
 
@@ -49,7 +50,10 @@ export function shipmentFromBody(body: Record<string, unknown>): { input?: Shipm
     markdown: md,
     location: optStr(body.location, 120) || meta.location,
     note: optStr(body.note, 500),
+    // Values typed in the form win over values in the uploaded file.
+    receipt: { ...(meta.receipt ?? {}), ...cleanReceipt(body.receipt) },
   };
+  // An empty receipt holder_name prints the shipment holder (see pdf.ts), so it follows edits.
   if (!input.title) return { error: "Add a short description of the shipment (title)." };
   if (!input.holder) return { error: "Add the holder / customer name." };
   if (!isStatus(input.status)) return { error: "Unknown status." };

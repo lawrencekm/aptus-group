@@ -9,7 +9,7 @@ import { SHIPMENT_STATUSES, type ShipmentStatus } from "@/lib/site";
 import type { Activity, Quote, Shipment } from "@/lib/types";
 import { ShipmentEditor } from "./ShipmentEditor";
 
-type Overview = { shipments: Shipment[]; activity: Activity[]; quotes: Quote[]; lastLogin: { at: string; ip: string } | null };
+type Overview = { shipments: Shipment[]; activity: Activity[]; quotes: (Quote & { receiptUrl?: string })[]; lastLogin: { at: string; ip: string } | null };
 
 const ACTIVE: ShipmentStatus[] = ["Booked", "Received", "In Safe Custody", "In Transit", "At Customs", "Out for Delivery", "On Hold"];
 
@@ -32,6 +32,9 @@ const activityIcon: Record<string, { icon: IconName; tone: string }> = {
   "shipment.viewed": { icon: "eye", tone: "text-cyan-300 bg-cyan-400/10" },
   "track.miss": { icon: "search", tone: "text-orange-300 bg-orange-400/10" },
   "quote.received": { icon: "inbox", tone: "text-brand-100 bg-brand-500/15" },
+  "contact.received": { icon: "mail", tone: "text-brand-100 bg-brand-500/15" },
+  "shipment.receipt_sent": { icon: "send", tone: "text-emerald-300 bg-emerald-400/10" },
+  "bot.blocked": { icon: "shield", tone: "text-amber-300 bg-amber-400/10" },
 };
 function iconFor(kind: string) {
   return activityIcon[kind] || (kind.startsWith("auth") ? activityIcon.auth : { icon: "activity" as IconName, tone: "text-ink-200 bg-white/5" });
@@ -155,9 +158,9 @@ export function Dashboard({ siteUrl }: { siteUrl: string }) {
   const feed = useMemo(() => {
     const act = data?.activity ?? [];
     return act.filter((a) => {
-      if (feedFilter === "security") return a.kind.startsWith("auth") || a.kind === "track.miss";
+      if (feedFilter === "security") return a.kind.startsWith("auth") || a.kind === "track.miss" || a.kind === "bot.blocked";
       if (feedFilter === "shipments") return a.kind.startsWith("shipment.") && a.kind !== "shipment.viewed";
-      if (feedFilter === "public") return a.kind === "shipment.viewed" || a.kind === "quote.received" || a.kind === "track.miss";
+      if (feedFilter === "public") return a.kind === "shipment.viewed" || a.kind === "quote.received" || a.kind === "contact.received" || a.kind === "track.miss";
       return true;
     });
   }, [data, feedFilter]);
@@ -210,7 +213,7 @@ export function Dashboard({ siteUrl }: { siteUrl: string }) {
             { k: "In custody", v: stats.custody, icon: "shield" as IconName },
             { k: "Delivered / released", v: stats.done, icon: "check" as IconName },
             { k: "Tracking views", v: stats.views, sub: `${stats.views24} in last 24h`, icon: "eye" as IconName },
-            { k: "Quote requests (7d)", v: stats.quotes7, icon: "inbox" as IconName },
+            { k: "Requests (7d)", v: stats.quotes7, icon: "inbox" as IconName },
           ].map((c) => (
             <div key={c.k} className="rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/10">
               <div className="flex items-center justify-between text-ink-400">
@@ -239,7 +242,7 @@ export function Dashboard({ siteUrl }: { siteUrl: string }) {
                   onClick={() => setTab(t)}
                   className={`rounded-t-lg px-4 py-2.5 text-sm font-semibold capitalize ${tab === t ? "bg-white/5 text-white" : "text-ink-400 hover:text-ink-200"}`}
                 >
-                  {t}
+                  {t === "quotes" ? "Inbox" : t}
                   <span className="ml-2 rounded-full bg-white/10 px-2 py-0.5 text-xs">{t === "shipments" ? shipments.length : data?.quotes.length ?? 0}</span>
                 </button>
               ))}
@@ -438,15 +441,20 @@ function ActionBtn({ icon, label, onClick, danger }: { icon: IconName; label: st
   );
 }
 
-function QuotesList({ quotes, onCopy }: { quotes: Quote[]; onCopy: (t: string, l: string) => void }) {
-  if (!quotes.length) return <p className="p-12 text-center text-sm text-ink-400">No quote requests yet. They appear here when someone uses the Contact form.</p>;
+function QuotesList({ quotes, onCopy }: { quotes: (Quote & { receiptUrl?: string })[]; onCopy: (t: string, l: string) => void }) {
+  if (!quotes.length) return <p className="p-12 text-center text-sm text-ink-400">No requests yet. Quote requests and contact messages from the website appear here.</p>;
   return (
     <ul className="divide-y divide-white/5">
       {quotes.map((q) => (
         <li key={q.id} className="px-4 py-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="font-semibold text-white">
-              {q.name} <span className="ml-2 rounded-full bg-white/5 px-2 py-0.5 text-xs font-normal text-ink-300">{q.service}</span>
+              {q.name}
+              <span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-normal ${q.kind === "contact" ? "bg-sky-400/10 text-sky-200" : "bg-brand-500/15 text-brand-100"}`}>
+                {q.kind === "contact" ? "Message" : "Quote"}
+              </span>
+              <span className="ml-2 rounded-full bg-white/5 px-2 py-0.5 text-xs font-normal text-ink-300">{q.service}</span>
+              {q.ref && <span className="ml-2 font-mono text-xs font-normal text-ink-400">{q.ref}</span>}
             </p>
             <span className="text-xs text-ink-500">{ago(q.at)}</span>
           </div>
@@ -454,7 +462,12 @@ function QuotesList({ quotes, onCopy }: { quotes: Quote[]; onCopy: (t: string, l
           <div className="mt-2 flex flex-wrap gap-3 text-xs">
             <a href={`tel:${q.phone}`} className="text-brand-500 hover:underline">{q.phone}</a>
             {q.email && <a href={`mailto:${q.email}`} className="text-brand-500 hover:underline">{q.email}</a>}
-            <button onClick={() => onCopy(`${q.name} ${q.phone} ${q.email ?? ""}\n${q.details}`, "Quote")} className="text-ink-400 hover:text-white">Copy</button>
+            <button onClick={() => onCopy(`${q.name} ${q.phone} ${q.email ?? ""}\n${q.details}`, "Request")} className="text-ink-400 hover:text-white">Copy</button>
+            {q.receiptUrl && q.ref && (
+              <a href={q.receiptUrl} target="_blank" className="text-ink-400 hover:text-white">
+                Receipt PDF
+              </a>
+            )}
           </div>
         </li>
       ))}

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Logo } from "@/components/Logo";
 import { Icon } from "@/components/Icon";
 
-export default function AdminLogin() {
+function OtpLogin() {
   const router = useRouter();
   const [phase, setPhase] = useState<"start" | "code">("start");
   const [to, setTo] = useState<string | null>(null);
@@ -156,6 +156,100 @@ export default function AdminLogin() {
             </p>
           )}
         </div>
+        <p className="mt-6 text-center text-xs text-ink-500">Authorised staff only. All sign-in attempts are logged.</p>
+      </main>
+    </div>
+  );
+}
+
+export default function AdminLogin() {
+  const [mode, setMode] = useState<"password" | "otp" | null>(null);
+  useEffect(() => {
+    fetch("/api/auth/login")
+      .then((r) => r.json())
+      .then((d) => setMode(d.mode === "otp" ? "otp" : "password"))
+      .catch(() => setMode("password"));
+  }, []);
+  if (mode === "otp") return <OtpLogin />;
+  return <PasswordLogin ready={mode === "password"} />;
+}
+
+function PasswordLogin({ ready }: { ready: boolean }) {
+  const router = useRouter();
+  const [password, setPassword] = useState("");
+  const [show, setShow] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    const d = await res.json().catch(() => ({}));
+    if (res.ok) {
+      router.replace("/admin");
+      router.refresh();
+      return;
+    }
+    setBusy(false);
+    setPassword("");
+    setError(d.error || "Sign-in failed.");
+  }
+
+  return (
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
+      <div className="grid-lines absolute inset-0" aria-hidden="true" />
+      <div className="absolute left-1/2 top-1/3 h-96 w-96 -translate-x-1/2 rounded-full bg-brand-500/15 blur-3xl" aria-hidden="true" />
+      <main className="relative w-full max-w-sm">
+        <div className="mb-8 flex justify-center">
+          <Logo light />
+        </div>
+        <form onSubmit={submit} className="rounded-3xl bg-white/[0.04] p-7 ring-1 ring-white/10 backdrop-blur">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500/15 text-brand-500">
+              <Icon name="lock" />
+            </span>
+            <div>
+              <h1 className="font-display text-lg font-bold text-white">Admin sign in</h1>
+              <p className="text-xs text-ink-400">Single administrator account</p>
+            </div>
+          </div>
+          <label className="mt-6 block text-sm text-ink-200" htmlFor="admin-password">
+            Password
+          </label>
+          <div className="mt-1.5 flex items-center rounded-xl bg-white/5 ring-1 ring-white/15 focus-within:ring-2 focus-within:ring-brand-500">
+            <input
+              id="admin-password"
+              type={show ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              autoFocus
+              required
+              disabled={!ready || busy}
+              className="w-full bg-transparent px-4 py-3 text-white outline-none"
+            />
+            <button type="button" onClick={() => setShow((v) => !v)} className="px-3 text-xs text-ink-400 hover:text-white" aria-label={show ? "Hide password" : "Show password"}>
+              {show ? "Hide" : "Show"}
+            </button>
+          </div>
+          <button
+            disabled={!ready || busy || !password}
+            className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500 py-3 font-semibold text-white hover:bg-brand-600 disabled:opacity-60"
+          >
+            {busy ? "Signing in…" : "Sign in"} <Icon name="arrow" className="h-4 w-4" />
+          </button>
+          {error && (
+            <p role="alert" className="mt-5 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300 ring-1 ring-red-500/30">
+              {error}
+            </p>
+          )}
+        </form>
         <p className="mt-6 text-center text-xs text-ink-500">Authorised staff only. All sign-in attempts are logged.</p>
       </main>
     </div>

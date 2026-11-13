@@ -2,42 +2,83 @@
 
 import { useState } from "react";
 import { Icon } from "./Icon";
+import { RequestDone } from "./RequestDone";
+import { useBotCheck } from "./useBotCheck";
 
 const input =
   "mt-1.5 w-full rounded-xl border border-ink-200 bg-white px-4 py-3 text-ink-900 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10";
 
-export function QuoteForm({ services, initialService }: { services: string[]; initialService?: string }) {
-  const [state, setState] = useState<"idle" | "busy" | "done">("idle");
+type Done = { ref: string; receiptUrl: string; emailed: boolean };
+
+/** Shared submit logic for the public forms: bot proof + JSON POST. */
+function useSubmit(endpoint: string) {
+  const getToken = useBotCheck();
+  const [state, setState] = useState<"idle" | "busy">("idle");
   const [error, setError] = useState("");
+  const [done, setDone] = useState<Done | null>(null);
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const form = e.currentTarget;
     setState("busy");
     setError("");
-    const data = Object.fromEntries(new FormData(e.currentTarget));
-    const res = await fetch("/api/quote", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
-    if (res.ok) setState("done");
-    else {
+    try {
+      const data = Object.fromEntries(new FormData(form)) as Record<string, string>;
+      const token = await getToken();
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...data, ...token }),
+      });
+      const d = (await res.json().catch(() => ({}))) as { error?: string; ref?: string; receiptUrl?: string };
+      if (!res.ok) throw new Error(d.error || "Could not send. Please call us.");
+      if (d.ref && d.receiptUrl) {
+        setDone({ ref: d.ref, receiptUrl: d.receiptUrl, emailed: !!data.email });
+        form.reset();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send. Please call us.");
+    } finally {
       setState("idle");
-      setError(((await res.json().catch(() => ({}))) as { error?: string }).error || "Could not send. Please call us.");
     }
   }
+  return { submit, state, error, done, reset: () => setDone(null) };
+}
 
-  if (state === "done") {
-    return (
-      <div className="py-10 text-center">
-        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-green-50 text-green-600">
-          <Icon name="check" className="h-7 w-7" strokeWidth={2.4} />
-        </span>
-        <h2 className="mt-4 font-display text-2xl font-bold text-ink-900">Request received</h2>
-        <p className="mt-2 text-ink-500">Thank you. Our team will contact you within one working day.</p>
+function Honeypot() {
+  // Hidden from people (and screen readers); bots that fill every field get caught.
+  return (
+    <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">
+      <label>
+        Company website
+        <input name="company_website" tabIndex={-1} autoComplete="off" />
+      </label>
+    </div>
+  );
+}
+
+function SubmitRow({ busy, label, error }: { busy: boolean; label: string; error: string }) {
+  return (
+    <>
+      {error && <p role="alert" className="text-sm text-brand-700 sm:col-span-2">{error}</p>}
+      <div className="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:items-center">
+        <button disabled={busy} className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-6 py-3.5 font-semibold text-white hover:bg-brand-600 disabled:opacity-60">
+          {busy ? "Sending…" : label} <Icon name="arrow" className="h-4 w-4" />
+        </button>
+        <p className="flex items-center gap-1.5 text-xs text-ink-400">
+          <Icon name="shield" className="h-3.5 w-3.5" /> Protected against spam. You&apos;ll get a PDF receipt.
+        </p>
       </div>
-    );
-  }
+    </>
+  );
+}
+
+export function QuoteForm({ services, initialService }: { services: string[]; initialService?: string }) {
+  const { submit, state, error, done, reset } = useSubmit("/api/quote");
+  if (done) return <RequestDone refNo={done.ref} receiptUrl={done.receiptUrl} emailed={done.emailed} onAnother={reset} />;
 
   return (
-    <form onSubmit={submit} className="grid gap-5 sm:grid-cols-2">
-      <h2 className="font-display text-xl font-bold text-ink-900 sm:col-span-2">Request a quote</h2>
+    <form onSubmit={submit} className="relative grid gap-5 sm:grid-cols-2">
       <label className="text-sm font-medium text-ink-700">
         Full name
         <input name="name" required maxLength={120} autoComplete="name" className={input} />
@@ -47,7 +88,7 @@ export function QuoteForm({ services, initialService }: { services: string[]; in
         <input name="phone" required maxLength={40} type="tel" autoComplete="tel" placeholder="+254…" className={input} />
       </label>
       <label className="text-sm font-medium text-ink-700">
-        Email (optional)
+        Email <span className="font-normal text-ink-400">(for your receipt)</span>
         <input name="email" type="email" maxLength={160} autoComplete="email" className={input} />
       </label>
       <label className="text-sm font-medium text-ink-700">
@@ -61,24 +102,70 @@ export function QuoteForm({ services, initialService }: { services: string[]; in
       </label>
       <label className="text-sm font-medium text-ink-700 sm:col-span-2">
         What do you need?
-        <textarea
-          name="details"
-          required
-          maxLength={2000}
-          rows={5}
-          placeholder="Goods, approximate weight/size, origin and destination, dates…"
-          className={input}
-        />
+        <textarea name="details" required maxLength={2000} rows={5} placeholder="Goods, approximate weight/size, origin and destination, dates…" className={input} />
       </label>
-      {/* Honeypot: hidden from people, filled by bots */}
-      <input name="company_website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
-      {error && <p className="text-sm text-brand-700 sm:col-span-2">{error}</p>}
-      <button
-        disabled={state === "busy"}
-        className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-6 py-3.5 font-semibold text-white hover:bg-brand-600 disabled:opacity-60 sm:col-span-2 sm:justify-self-start"
-      >
-        {state === "busy" ? "Sending…" : "Send request"} <Icon name="arrow" className="h-4 w-4" />
-      </button>
+      <Honeypot />
+      <SubmitRow busy={state === "busy"} label="Send request" error={error} />
     </form>
+  );
+}
+
+export function ContactForm() {
+  const { submit, state, error, done, reset } = useSubmit("/api/contact");
+  if (done) return <RequestDone refNo={done.ref} receiptUrl={done.receiptUrl} emailed={done.emailed} onAnother={reset} />;
+
+  return (
+    <form onSubmit={submit} className="relative grid gap-5 sm:grid-cols-2">
+      <label className="text-sm font-medium text-ink-700">
+        Full name
+        <input name="name" required maxLength={120} autoComplete="name" className={input} />
+      </label>
+      <label className="text-sm font-medium text-ink-700">
+        Email
+        <input name="email" type="email" maxLength={160} autoComplete="email" className={input} />
+      </label>
+      <label className="text-sm font-medium text-ink-700">
+        Phone <span className="font-normal text-ink-400">(optional)</span>
+        <input name="phone" maxLength={40} type="tel" autoComplete="tel" placeholder="+254…" className={input} />
+      </label>
+      <label className="text-sm font-medium text-ink-700">
+        Subject
+        <input name="subject" maxLength={80} placeholder="e.g. Collecting my deposit" className={input} />
+      </label>
+      <label className="text-sm font-medium text-ink-700 sm:col-span-2">
+        Message
+        <textarea name="message" required maxLength={2000} rows={5} className={input} />
+      </label>
+      <Honeypot />
+      <SubmitRow busy={state === "busy"} label="Send message" error={error} />
+    </form>
+  );
+}
+
+/** Tabs between "Request a quote" and "Send a message" on the contact page. */
+export function ContactForms({ services, initialService, initialTab = "quote" }: { services: string[]; initialService?: string; initialTab?: "quote" | "message" }) {
+  const [tab, setTab] = useState<"quote" | "message">(initialTab);
+  return (
+    <div>
+      <div role="tablist" className="mb-6 inline-flex rounded-xl bg-ink-50 p-1 ring-1 ring-ink-100">
+        {(
+          [
+            ["quote", "Request a quote"],
+            ["message", "Send a message"],
+          ] as const
+        ).map(([k, l]) => (
+          <button
+            key={k}
+            role="tab"
+            aria-selected={tab === k}
+            onClick={() => setTab(k)}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${tab === k ? "bg-white text-ink-900 shadow-sm" : "text-ink-500 hover:text-ink-900"}`}
+          >
+            {l}
+          </button>
+        ))}
+      </div>
+      {tab === "quote" ? <QuoteForm services={services} initialService={initialService} /> : <ContactForm />}
+    </div>
   );
 }

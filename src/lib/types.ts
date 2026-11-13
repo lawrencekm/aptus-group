@@ -20,6 +20,8 @@ export type Shipment = {
   destination?: string;
   status: ShipmentStatus;
   markdown: string;
+  /** Safe Keeping Receipt fields (see receipt-fields.ts). */
+  receipt?: Record<string, string>;
   events: ShipmentEvent[];
   createdAt: string;
   updatedAt: string;
@@ -39,7 +41,10 @@ export type ActivityKind =
   | "shipment.code_rotated"
   | "shipment.viewed"
   | "track.miss"
-  | "quote.received";
+  | "quote.received"
+  | "contact.received"
+  | "shipment.receipt_sent"
+  | "bot.blocked";
 
 export type Activity = {
   id: string;
@@ -50,12 +55,17 @@ export type Activity = {
   ref?: string; // shipment id or quote id
 };
 
+/** A request from the public site: a quote request or a contact message. */
 export type Quote = {
   id: string;
+  /** Human reference printed on the request receipt, e.g. RQ-261114-7KQ2 */
+  ref?: string;
+  kind?: "quote" | "contact";
   at: string;
   name: string;
   phone: string;
   email?: string;
+  /** Service for quotes, subject for contact messages. */
   service: string;
   details: string;
   handled?: boolean;

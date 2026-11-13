@@ -9,9 +9,12 @@
 // service: Safe Custody
 // status: Received
 // reference: CUST-0042
+// passport_id: A1234567      <- any receipt field (see receipt-fields.ts)
 // ---
 // # Shipment notes
 // Free-form **markdown** shown on the public tracking page.
+
+import { RECEIPT_KEYS, type ReceiptData } from "./receipt-fields";
 
 export type ShipmentMeta = Partial<{
   title: string;
@@ -22,7 +25,7 @@ export type ShipmentMeta = Partial<{
   status: string;
   reference: string;
   location: string;
-}>;
+}> & { receipt?: ReceiptData };
 
 const KEYS = new Set(["title", "holder", "origin", "destination", "service", "status", "reference", "location"]);
 const ALIASES: Record<string, string> = {
@@ -39,13 +42,21 @@ export function parseFrontmatter(src: string): { meta: ShipmentMeta; body: strin
   const m = text.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
   if (!m) return { meta: {}, body: text.trim() };
   const meta: Record<string, string> = {};
+  const receipt: ReceiptData = {};
   for (const line of m[1].split("\n")) {
     const kv = line.match(/^\s*([A-Za-z_]+)\s*:\s*(.*)$/);
     if (!kv) continue;
-    let key = kv[1].toLowerCase();
-    key = ALIASES[key] ?? key;
+    const value = kv[2].trim().replace(/^["']|["']$/g, "");
+    const raw = kv[1].toLowerCase();
+    if (RECEIPT_KEYS.has(raw)) {
+      if (value) receipt[raw] = value;
+      continue;
+    }
+    const key = ALIASES[raw] ?? raw;
     if (!KEYS.has(key)) continue;
-    meta[key] = kv[2].trim().replace(/^["']|["']$/g, "");
+    meta[key] = value;
   }
-  return { meta: meta as ShipmentMeta, body: m[2].trim() };
+  const out = meta as ShipmentMeta;
+  if (Object.keys(receipt).length) out.receipt = receipt;
+  return { meta: out, body: m[2].trim() };
 }

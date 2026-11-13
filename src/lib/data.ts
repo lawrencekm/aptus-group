@@ -41,10 +41,13 @@ async function uniqueCode(): Promise<string> {
   throw new Error("Could not allocate a unique tracking code");
 }
 
-function trackingNumber(): string {
+function ymd(): string {
   const d = new Date();
-  const ymd = `${String(d.getUTCFullYear()).slice(2)}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}`;
-  return `AG-${ymd}-${trackingCode(4)}`;
+  return `${String(d.getUTCFullYear()).slice(2)}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+
+function trackingNumber(): string {
+  return `AG-${ymd()}-${trackingCode(4)}`;
 }
 
 export type ShipmentInput = {
@@ -58,6 +61,7 @@ export type ShipmentInput = {
   markdown: string;
   location?: string;
   note?: string;
+  receipt?: Record<string, string>;
 };
 
 export async function createShipment(input: ShipmentInput): Promise<Shipment> {
@@ -83,6 +87,7 @@ export async function createShipment(input: ShipmentInput): Promise<Shipment> {
     destination: input.destination,
     status: input.status,
     markdown: input.markdown,
+    receipt: input.receipt,
     events: [first],
     createdAt: now,
     updatedAt: now,
@@ -158,10 +163,17 @@ export async function recordView(s: Shipment, ip: string): Promise<void> {
 
 // ---------- quotes ----------
 
-export async function addQuote(q: Omit<Quote, "id" | "at">): Promise<Quote> {
-  const quote: Quote = { id: randomId(8), at: new Date().toISOString(), ...q };
+export async function addQuote(q: Omit<Quote, "id" | "at" | "ref">): Promise<Quote> {
+  const id = randomId(8);
+  const quote: Quote = { id, ref: `RQ-${ymd()}-${trackingCode(4)}`, at: new Date().toISOString(), ...q };
   await store().lpush(K.quotes, quote, 300);
+  await store().set(`request:${id}`, quote, 60 * 60 * 24 * 365);
   return quote;
+}
+
+/** Looks up one public request (for its PDF receipt). */
+export async function getQuote(id: string): Promise<Quote | null> {
+  return store().get<Quote>(`request:${id}`);
 }
 
 export async function listQuotes(count = 100): Promise<Quote[]> {

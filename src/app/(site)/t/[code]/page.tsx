@@ -115,6 +115,29 @@ export default async function ShipmentPage({ params }: { params: Promise<{ code:
             ))}
           </section>
 
+          {/* PDF receipt */}
+          <section className="no-print flex flex-col gap-4 border-b border-ink-100 bg-gradient-to-r from-brand-50 to-white p-6 sm:flex-row sm:items-center sm:justify-between sm:px-8" aria-label="Receipt">
+            <div className="flex items-center gap-4">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-500 text-white shadow-lg shadow-brand-500/25">
+                <Icon name="file" className="h-6 w-6" />
+              </span>
+              <div>
+                <h2 className="font-display text-base font-bold text-ink-900">Safe Keeping Receipt</h2>
+                <p className="text-sm text-ink-500">
+                  Bonded declaration (SKR) No. <span className="font-mono">{s.trackingNumber}</span>, as a PDF.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <a href={`/t/${s.code}/receipt`} target="_blank" rel="noopener" className="inline-flex items-center gap-2 rounded-xl bg-ink-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-ink-800">
+                <Icon name="eye" className="h-4 w-4" /> View
+              </a>
+              <a href={`/t/${s.code}/receipt?download=1`} className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-ink-800 ring-1 ring-ink-200 hover:bg-ink-50">
+                <Icon name="download" className="h-4 w-4" /> Download
+              </a>
+            </div>
+          </section>
+
           <div className="grid gap-0 lg:grid-cols-[1fr_1.2fr]">
             {/* Timeline */}
             <section className="border-b border-ink-100 p-6 sm:p-8 lg:border-b-0 lg:border-r" aria-label="History">

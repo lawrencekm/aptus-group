@@ -5,6 +5,7 @@ import { Icon } from "@/components/Icon";
 import { Markdown } from "@/components/Markdown";
 import { StatusBadge } from "@/components/StatusBadge";
 import { parseFrontmatter } from "@/lib/frontmatter";
+import { ORDER_TEMPLATE, RECEIPT_ROWS } from "@/lib/receipt-fields";
 import { SHIPMENT_STATUSES, services, type ShipmentStatus } from "@/lib/site";
 import type { Shipment } from "@/lib/types";
 
@@ -12,24 +13,8 @@ const field =
   "mt-1 w-full rounded-xl bg-white/5 px-3 py-2.5 text-sm text-white outline-none ring-1 ring-white/10 placeholder:text-ink-500 focus:ring-2 focus:ring-brand-500";
 const label = "block text-xs font-medium text-ink-300";
 
-const SAMPLE = `---
-title: 2 sealed document cases
-holder: Jane Wanjiku
-origin: Kampala, Uganda
-destination: Nairobi, Kenya
-service: Safe Custody & Safe Keeping
-status: In Safe Custody
-reference: CUST-0042
----
-## Contents
-| Item | Qty | Notes |
-|------|-----|-------|
-| Document case | 2 | Sealed, seal nos. 00412–00413 |
-
-## Release conditions
-- 24 hours' written notice
-- Original ID of the depositor
-`;
+// Every new order starts from the template (fields, receipt values and notes), ready to edit.
+const TEMPLATE = parseFrontmatter(ORDER_TEMPLATE);
 
 type Props = {
   shipment: Shipment | null;
@@ -41,18 +26,20 @@ type Props = {
 
 export function ShipmentEditor({ shipment, siteUrl, onClose, onSaved, onCopy }: Props) {
   const isNew = !shipment;
+  const t = TEMPLATE.meta;
   const [f, setF] = useState({
-    title: shipment?.title ?? "",
-    holder: shipment?.holder ?? "",
-    reference: shipment?.reference ?? "",
-    service: shipment?.service ?? services[0].title,
-    origin: shipment?.origin ?? "",
-    destination: shipment?.destination ?? "",
-    status: (shipment?.status ?? "Received") as ShipmentStatus,
-    location: "",
+    title: shipment?.title ?? t.title ?? "",
+    holder: shipment?.holder ?? t.holder ?? "",
+    reference: shipment?.reference ?? t.reference ?? "",
+    service: shipment?.service ?? t.service ?? services[0].title,
+    origin: shipment?.origin ?? t.origin ?? "",
+    destination: shipment?.destination ?? t.destination ?? "",
+    status: (shipment?.status ?? t.status ?? "Received") as ShipmentStatus,
+    location: shipment ? "" : (t.location ?? ""),
     note: "",
   });
-  const [markdown, setMarkdown] = useState(shipment?.markdown ?? "");
+  const [markdown, setMarkdown] = useState(shipment?.markdown ?? TEMPLATE.body);
+  const [receipt, setReceipt] = useState<Record<string, string>>(shipment?.receipt ?? t.receipt ?? {});
   const [mdTab, setMdTab] = useState<"write" | "preview">("write");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -73,6 +60,7 @@ export function ShipmentEditor({ shipment, siteUrl, onClose, onSaved, onCopy }: 
       status: shipment.status,
     }));
     setMarkdown(shipment.markdown);
+    setReceipt(shipment.receipt ?? {});
   }, [shipment]);
 
   useEffect(() => {
@@ -94,6 +82,7 @@ export function ShipmentEditor({ shipment, siteUrl, onClose, onSaved, onCopy }: 
       status: meta.status && (SHIPMENT_STATUSES as readonly string[]).includes(meta.status) ? (meta.status as ShipmentStatus) : x.status,
       location: meta.location ?? x.location,
     }));
+    if (meta.receipt) setReceipt((r) => ({ ...r, ...meta.receipt }));
     setMarkdown(body);
   }
 
@@ -111,7 +100,7 @@ export function ShipmentEditor({ shipment, siteUrl, onClose, onSaved, onCopy }: 
     const res = await fetch(isNew ? "/api/admin/shipments" : `/api/admin/shipments/${shipment!.id}`, {
       method: isNew ? "POST" : "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...f, status: isNew ? f.status : shipment!.status, markdown }),
+      body: JSON.stringify({ ...f, status: isNew ? f.status : shipment!.status, markdown, receipt }),
     });
     const d = await res.json().catch(() => ({}));
     setBusy(false);
@@ -156,16 +145,36 @@ export function ShipmentEditor({ shipment, siteUrl, onClose, onSaved, onCopy }: 
                 className={`rounded-2xl border-2 border-dashed p-6 text-center transition ${drag ? "border-brand-500 bg-brand-500/5" : "border-white/10"}`}
               >
                 <Icon name="upload" className="mx-auto h-8 w-8 text-ink-400" />
-                <p className="mt-2 text-sm text-white">Drop a markdown file here, or</p>
+                <p className="mt-2 text-sm text-white">This order starts from the template below. Edit it, or drop a markdown file here to fill it.</p>
                 <div className="mt-3 flex flex-wrap justify-center gap-2">
                   <button type="button" onClick={() => fileRef.current?.click()} className="rounded-lg bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/15">
                     Choose file
                   </button>
-                  <button type="button" onClick={() => applyMarkdown(SAMPLE)} className="rounded-lg px-3 py-1.5 text-sm text-ink-300 ring-1 ring-white/10 hover:bg-white/5">
-                    Use sample
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReceipt({});
+                      applyMarkdown(ORDER_TEMPLATE);
+                    }}
+                    className="rounded-lg px-3 py-1.5 text-sm text-ink-300 ring-1 ring-white/10 hover:bg-white/5"
+                  >
+                    Reset to template
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const a = document.createElement("a");
+                      a.href = URL.createObjectURL(new Blob([ORDER_TEMPLATE], { type: "text/markdown" }));
+                      a.download = "aptus-order-template.md";
+                      a.click();
+                      URL.revokeObjectURL(a.href);
+                    }}
+                    className="rounded-lg px-3 py-1.5 text-sm text-ink-300 ring-1 ring-white/10 hover:bg-white/5"
+                  >
+                    Download template .md
                   </button>
                 </div>
-                <p className="mt-3 text-xs text-ink-500">Frontmatter keys (title, holder, origin, destination, service, status, reference) fill the form automatically.</p>
+                <p className="mt-3 text-xs text-ink-500">Frontmatter keys (title, holder, status… and every receipt field such as passport_id or bonded_fee) fill the form automatically.</p>
                 <input ref={fileRef} type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" className="hidden" onChange={(e) => e.target.files?.[0] && readFile(e.target.files[0])} />
               </div>
             )}
@@ -230,6 +239,8 @@ export function ShipmentEditor({ shipment, siteUrl, onClose, onSaved, onCopy }: 
                 </>
               )}
             </div>
+
+            <ReceiptFields value={receipt} onChange={setReceipt} holder={f.holder} />
 
             <div>
               <div className="flex items-center justify-between">
@@ -323,6 +334,9 @@ function AccessCard({ s, siteUrl, onCopy, onSaved }: { s: Shipment; siteUrl: str
         <a href={`/t/${s.code}`} target="_blank" className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-ink-200 ring-1 ring-white/10 hover:bg-white/5">
           <Icon name="eye" className="h-4 w-4" /> Open
         </a>
+        <a href={`/api/admin/shipments/${s.id}/receipt`} target="_blank" className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-ink-200 ring-1 ring-white/10 hover:bg-white/5">
+          <Icon name="file" className="h-4 w-4" /> Receipt PDF
+        </a>
         {confirm ? (
           <span className="inline-flex items-center gap-2 rounded-lg bg-amber-400/10 px-3 py-1.5 text-amber-200">
             Old link stops working.
@@ -335,7 +349,106 @@ function AccessCard({ s, siteUrl, onCopy, onSaved }: { s: Shipment; siteUrl: str
           </button>
         )}
       </div>
+      <SendReceipt s={s} />
     </section>
+  );
+}
+
+function SendReceipt({ s }: { s: Shipment }) {
+  const preset = s.receipt?.email && /@/.test(s.receipt.email) ? s.receipt.email : "";
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState(preset);
+  const [message, setMessage] = useState("");
+  const [state, setState] = useState<"idle" | "busy" | "sent">("idle");
+  const [error, setError] = useState("");
+
+  async function send(e: React.FormEvent) {
+    e.preventDefault();
+    setState("busy");
+    setError("");
+    const res = await fetch(`/api/admin/shipments/${s.id}/send-receipt`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, message }),
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setState("idle");
+      return setError(d.error || "Could not send.");
+    }
+    setState("sent");
+  }
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-brand-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-600">
+        <Icon name="send" className="h-4 w-4" /> Send receipt by email
+      </button>
+    );
+  }
+  return (
+    <form onSubmit={send} className="mt-4 space-y-3 rounded-xl bg-black/25 p-4">
+      <p className="text-sm font-semibold text-white">Email the Safe Keeping Receipt (PDF attached)</p>
+      <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+        <input
+          type="email"
+          required
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setState("idle");
+          }}
+          placeholder="customer@example.com"
+          aria-label="Recipient email"
+          className={field}
+        />
+        <button disabled={state === "busy"} className="mt-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-60">
+          <Icon name="send" className="h-4 w-4" /> {state === "busy" ? "Sending…" : "Send"}
+        </button>
+      </div>
+      <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={2} maxLength={1000} placeholder="Optional note to include in the email" aria-label="Note" className={field} />
+      {state === "sent" && <p className="text-sm text-green-300">Sent to {email}.</p>}
+      {error && <p className="text-sm text-red-300">{error}</p>}
+      <button type="button" onClick={() => setOpen(false)} className="text-xs text-ink-400 hover:text-white">
+        Close
+      </button>
+    </form>
+  );
+}
+
+function ReceiptFields({ value, onChange, holder }: { value: Record<string, string>; onChange: (v: Record<string, string>) => void; holder: string }) {
+  const filled = Object.values(value).filter(Boolean).length;
+  const set = (k: string, v: string) => onChange({ ...value, [k]: v });
+  return (
+    <details open className="group rounded-2xl bg-white/[0.03] ring-1 ring-white/10">
+      <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4">
+        <span className="text-sm font-semibold text-white">
+          Safe Keeping Receipt fields <span className="ml-2 rounded-full bg-white/10 px-2 py-0.5 text-xs font-normal text-ink-300">{filled} filled</span>
+        </span>
+        <Icon name="arrow" className="h-4 w-4 rotate-90 text-ink-400 transition group-open:-rotate-90" />
+      </summary>
+      <div className="space-y-3 border-t border-white/10 p-5">
+        {RECEIPT_ROWS.map((row, i) => (
+          <div key={i} className="grid gap-3 sm:grid-cols-4">
+            {row.map((fld) => (
+              <label key={fld.key} className={`${label} ${fld.span === 2 ? "sm:col-span-2" : ""}`}>
+                <span className="line-clamp-1" title={fld.label}>
+                  {fld.label}
+                </span>
+                {fld.long ? (
+                  <textarea rows={2} value={value[fld.key] ?? ""} onChange={(e) => set(fld.key, e.target.value)} maxLength={400} className={field} />
+                ) : (
+                  <input value={value[fld.key] ?? ""} onChange={(e) => set(fld.key, e.target.value)} placeholder={fld.key === "holder_name" ? holder : ""} maxLength={400} className={field} />
+                )}
+              </label>
+            ))}
+          </div>
+        ))}
+        <p className="text-xs text-ink-500">
+          Blank fields print empty on the receipt, like the paper form. Passport, email and phone are partly hidden on the copy customers download with their code.
+        </p>
+      </div>
+    </details>
   );
 }
 

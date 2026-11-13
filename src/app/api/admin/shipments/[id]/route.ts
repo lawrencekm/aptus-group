@@ -27,6 +27,7 @@ export const PATCH = adminRoute<P>(async (req, { ip }, { id }) => {
     origin: input.origin,
     destination: input.destination,
     markdown: input.markdown,
+    receipt: input.receipt,
   });
   let saved;
   if (statusChanged) {

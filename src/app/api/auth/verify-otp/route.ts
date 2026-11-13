@@ -1,8 +1,7 @@
-import { cookies } from "next/headers";
 import { store } from "@/lib/store";
 import { logActivity } from "@/lib/data";
-import { clientIp, hmac, json, randomId, rateLimit, safeEqual, sameOrigin, userAgent } from "@/lib/security";
-import { SESSION_COOKIE, SESSION_TTL_SECONDS, signSession } from "@/lib/session";
+import { startSession } from "@/lib/auth";
+import { clientIp, hmac, json, rateLimit, safeEqual, sameOrigin } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -35,18 +34,6 @@ export async function POST(req: Request) {
   }
 
   await store().del("otp:current");
-  const sid = randomId(18);
-  await store().set(`session:${sid}`, { createdAt: Date.now(), ip, ua: await userAgent() }, SESSION_TTL_SECONDS);
-  await store().set("auth:lastLogin", { at: new Date().toISOString(), ip }, 60 * 60 * 24 * 365);
-
-  const jar = await cookies();
-  jar.set(SESSION_COOKIE, await signSession(sid), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    path: "/",
-    maxAge: SESSION_TTL_SECONDS,
-  });
-  await logActivity("auth.login", "Admin signed in", { ip });
+  await startSession(ip);
   return json({ ok: true });
 }
