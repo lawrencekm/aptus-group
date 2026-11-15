@@ -17,12 +17,12 @@ export default function HomePage() {
         {/* Photo melts into the navy: dimmed, slow drift, faded on every edge */}
         <div className="absolute inset-0 -z-10" aria-hidden="true">
           <Image
-            src={photos.heroTruck.src}
+            src={photos.heroShip.src}
             alt=""
             fill
             priority
             sizes="100vw"
-            className="hero-drift -scale-x-100 object-cover object-[35%_center] opacity-80 lg:object-[40%_70%] lg:opacity-95"
+            className="hero-drift object-cover object-[65%_center] opacity-80 lg:object-[60%_65%] lg:opacity-95"
           />
           {/* Phones: text sits on a top-down fade, truck shows through below. Desktop: side fade behind the copy. */}
           <div className="absolute inset-0 bg-gradient-to-b from-ink-900 via-ink-900/85 to-ink-900/35 lg:hidden" />
@@ -33,7 +33,7 @@ export default function HomePage() {
         <div className="grid-lines absolute inset-0 opacity-60" aria-hidden="true" />
         <div className="absolute -left-40 top-20 h-[28rem] w-[28rem] rounded-full bg-brand-500/20 blur-3xl" aria-hidden="true" />
         <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-gold-400/10 blur-3xl" aria-hidden="true" />
-        {/* Headlight sweep along the road line */}
+        {/* Light glinting along the waterline */}
         <div className="headlight-sweep absolute bottom-[18%] left-0 h-px w-full" aria-hidden="true" />
         <div className="container-x relative grid items-center gap-12 py-16 sm:py-24 lg:grid-cols-[1.15fr_1fr]">
           <div>

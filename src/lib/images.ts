@@ -3,9 +3,9 @@
 const u = (id: string) => `https://images.unsplash.com/photo-${id}?auto=format&q=80&w=2400`;
 
 export const photos = {
-  heroTruck: {
-    src: u("1578857371787-189d8b9eda84"),
-    alt: "Articulated cargo truck on the road at dusk with its lights on",
+  heroShip: {
+    src: u("1703585752869-0bffd1c7709b"),
+    alt: "Fully laden container ship arriving in port at dusk, with cargo cranes behind",
   },
   vaultBoxes: {
     src: u("1634224152857-69c415153d4a"),
